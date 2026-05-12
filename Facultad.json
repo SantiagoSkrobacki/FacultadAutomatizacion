@@ -1,0 +1,747 @@
+{
+  "name": "Facultad",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -816,
+        224
+      ],
+      "id": "179c70ee-24ae-49bb-8c2f-2a870ba25aaa",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "",
+          "cachedResultUrl": ""
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -608,
+        224
+      ],
+      "id": "ed62e85d-8ad0-43aa-80a4-d18dc4476504",
+      "name": "Obtener filas",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Uzs2vTx05XGfGByN",
+          "name": "Cuenta de google 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const hoy = new Date();\nconst tresDias = 3 * 24 * 60 * 60 * 1000; // 3 días en milisegundos\nconst resultados = [];\n\nfor (const item of items) {\n  const fechaStr = item.json[\"Fecha\"];\n  if (!fechaStr) continue;\n\n  // Parseo flexible de fechas tipo dd/mm/yyyy o yyyy-mm-dd\n  let partes;\n  let fecha;\n  if (fechaStr.includes(\"/\")) {\n    partes = fechaStr.split(\"/\");\n    fecha = new Date(partes[2], partes[1] - 1, partes[0]);\n  } else if (fechaStr.includes(\"-\")) {\n    partes = fechaStr.split(\"-\");\n    fecha = new Date(partes[0], partes[1] - 1, partes[2]);\n  } else continue;\n\n  const diferencia = fecha - hoy;\n\n  // Solo si faltan entre 0 y 3 días (y aún no pasó)\n  if (diferencia > 0 && diferencia <= tresDias) {\n    resultados.push({\n      json: {\n        materia: item.json[\"Nombre materia\"],\n        tipo_examen: item.json[\"Tipo Examen\"],\n        fecha: fechaStr,\n        dias_restantes: Math.ceil(diferencia / (24 * 60 * 60 * 1000))\n      }\n    });\n  }\n}\n\nreturn resultados;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        224
+      ],
+      "id": "b638901f-faa3-4037-9b05-730bfbbf1a0d",
+      "name": "Filtrar los proximos"
+    },
+    {
+      "parameters": {
+        "sendTo": "=",
+        "subject": "=Recordatorio: examen próximo en {{ $json[\"dias_restantes\"] }} día(s)",
+        "message": "=<!doctype html> <html lang=\"es\">   <body style=\"font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#0f172a;background:#f8fafc;padding:20px\">     <div style=\"background:#fff;border-radius:10px;padding:20px;max-width:500px;margin:auto;border:1px solid #e2e8f0\">       <h2 style=\"color:#16a34a;text-align:center\">📅 ¡Tenés un examen pronto!</h2>       <p>Se acerca un examen programado:</p>       <ul style=\"line-height:1.6\">         <li><strong>Materia:</strong> {{ $json[\"materia\"] }}</li>         <li><strong>Tipo de examen:</strong> {{ $json[\"tipo_examen\"] }}</li>         <li><strong>Fecha:</strong> {{ $json[\"fecha\"] }}</li>       </ul>       <p>Faltan <strong>{{ $json[\"dias_restantes\"] }}</strong> día(s) para el examen. ¡Prepará los apuntes! 📚</p>     </div>   </body> </html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -176,
+        224
+      ],
+      "id": "e365f630-7508-42a2-a5ce-320d7955d9bb",
+      "name": "Notificar proximos examenes",
+      "webhookId": "05dce51b-88d8-488d-98fb-ff13a13a89f0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RfddcaGCO629ptVZ",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -592,
+        -80
+      ],
+      "id": "e3f9d1b5-db1a-4b03-8589-598693dd5ee2",
+      "name": "Agregar Examenes a Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Uzs2vTx05XGfGByN",
+          "name": "Cuenta de google 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "subject": "Examen nuevo",
+        "message": "=<!doctype html> \n<html lang=\"es\">   \n  <head>     \n    <meta charset=\"utf-8\">     \n    <title>Examen agregado</title>     \n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">     \n    <style>       \n      /* Estilos inline-friendly para emails */       \n      .wrapper{background:#f6f9fc;padding:24px 12px;}       \n      .container{max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;         \n      box-shadow:0 2px 10px rgba(0,0,0,0.06);overflow:hidden;border:1px solid #e9eef5;}       \n      .header{background:#22c55e;color:#fff;text-align:center;padding:22px 16px;}       \n      .header h1{margin:0;font-size:20px;line-height:1.3;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;}       \n      .body{padding:20px 20px 8px 20px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#0f172a}       \n      .lead{font-size:16px;margin:0 0 14px 0;color:#334155}       \n      .card{border:1px solid #e2e8f0;border-radius:10px;padding:14px;background:#fafcff}       \n      .row{display:flex;align-items:center;margin:8px 0}       \n      .label{width:150px;color:#64748b;font-weight:600;font-size:13px}       \n      .value{flex:1;color:#0f172a;font-size:14px}       \n      .footer{padding:16px 20px 22px 20px;text-align:center;color:#64748b;font-size:12px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}       \n      .btn{display:inline-block;background:#16a34a;color:#fff !important;text-decoration:none;         \n      padding:10px 16px;border-radius:8px;margin-top:12px;font-weight:600}       \n      .check{font-size:28px;margin-right:6px;vertical-align:-4px}     \n    </style>   \n  </head>   \n  <body>     \n    <div class=\"wrapper\">       \n      <div class=\"container\">         \n        <div class=\"header\">           \n          <h1>✅ ¡Examen agregado con éxito!</h1>         \n        </div>         \n        <div class=\"body\">           \n          <p class=\"lead\">             \n            Se registró correctamente la siguiente información en la planilla.           \n          </p>            \n          <div class=\"card\">             \n            <div class=\"row\">               \n              <div class=\"label\">Nombre materia</div>               \n              <div class=\"",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -384,
+        -80
+      ],
+      "id": "c6b5eb9f-f8c6-46da-9c14-acd1fd4b0c91",
+      "name": "Notificar que se agregó",
+      "webhookId": "6349779d-48a0-42af-a305-0cf427a8f48a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "RfddcaGCO629ptVZ",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Agregar Examenes de materias con fechas.\n",
+        "height": 224,
+        "width": 720,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -896,
+        -128
+      ],
+      "typeVersion": 1,
+      "id": "913513cf-cbff-4eb6-9c1c-d8dc9351902d",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Notificar a usuarios de exámenes próximos\n",
+        "height": 240,
+        "width": 1040,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -976,
+        160
+      ],
+      "typeVersion": 1,
+      "id": "334d8265-5f08-4c99-8c7f-955b09f06518",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Organización de fechas\n",
+        "height": 672,
+        "width": 1440
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1184,
+        -208
+      ],
+      "typeVersion": 1,
+      "id": "dfc59e74-d9f0-4497-8b5d-884baf21e492",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -48,
+        784
+      ],
+      "id": "a18016c8-d388-4a0d-8f0f-6ad9f28476cd",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "x6PQPIcj2ckYibkA",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "simple": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Simplify', ``, 'boolean') }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('actionFields0_Text', ``, 'string') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocsTool",
+      "typeVersion": 2,
+      "position": [
+        96,
+        768
+      ],
+      "id": "871998bf-3960-4f52-a16a-2c44720df713",
+      "name": "completar cronograma",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "JEk15YnjdtLD3eqy",
+          "name": "Google Docs account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1280,
+        576
+      ],
+      "id": "004f8574-0ca2-4149-968a-4c48c4a0488c",
+      "name": "Se sube programa de materia",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "CdrsrQMCQtGQ99wL",
+          "name": "n8n creedenciales 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "=",
+          "__regex": "https:\\/\\/(?:drive|docs)\\.google\\.com(?:\\/.*|)\\/d\\/([0-9a-zA-Z\\-_]+)(?:\\/.*|)"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1056,
+        576
+      ],
+      "id": "627292ee-eba6-4aec-b6cb-45667eb8eac3",
+      "name": "Se descarga",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "CdrsrQMCQtGQ99wL",
+          "name": "n8n creedenciales 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -864,
+        576
+      ],
+      "id": "b31d673b-c715-4a2a-a8dd-88dc07cb5a49",
+      "name": "Se obtiene información del mismo"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Tu tarea es generar un nombre de documento limpio y legible.\n\nVas a recibir el nombre de un archivo de programa de materia, por ejemplo:\n\"T12322 Desarrollo y Arquitectura de Software (Ghigliani 2024).pdf\"\n\nDebés devolver únicamente el nombre de la materia seguido de la palabra \"Cronograma\".\n\nReglas:\n- Eliminá códigos, paréntesis, nombres de docentes o años.\n- Quitá la extensión del archivo (.pdf, .docx, etc.).\n- Capitalizá correctamente (primera letra en mayúscula, el resto como corresponda).\n- No agregues texto adicional ni comillas.\n\nEjemplo:\nEntrada → \"T12322 Desarrollo y Arquitectura de Software (Ghigliani 2024).pdf\"\nSalida → Desarrollo y Arquitectura de Software - Cronograma\nnombre :  {{ $('Se descarga').item.json.originalFilename }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -672,
+        576
+      ],
+      "id": "e2c35875-b174-467c-9d63-fef2c48160d3",
+      "name": "Se llama a LLM para que obtenga nombre correcto del archivo",
+      "credentials": {
+        "openAiApi": {
+          "id": "x6PQPIcj2ckYibkA",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "driveId": "=",
+        "folderId": "=",
+        "title": "={{ $json.message.content }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -336,
+        576
+      ],
+      "id": "35370363-1e74-4a45-a5ba-a8cbca8e0a2c",
+      "name": "Se crea el documento del cronograma de la materia",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "JEk15YnjdtLD3eqy",
+          "name": "Google Docs account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Se obtiene información del mismo').item.json.text }}",
+        "options": {
+          "systemMessage": "Sos un asistente académico especializado en planificación de estudio.\n\nTu función es generar y completar cronogramas de estudio en documentos de Google Docs usando la herramienta \"completar cronograma\".\n\nDisponés de la herramienta llamada \"completar cronograma\", que te permite escribir y actualizar el contenido de un documento existente. \nNO crees archivos nuevos ni devuelvas texto plano: cuando el cronograma esté listo, usá esta herramienta para escribir el contenido completo en el documento de destino.\n\n---\n\n### Contexto de tu tarea\n\nVas a recibir un archivo (programa de materia) que incluye información sobre:\n- nombre de la materia,\n- unidades temáticas,\n- carga horaria o duración total,\n- cronograma sugerido (si existe),\n- y evaluaciones parciales o finales.\n\nTu objetivo es:\n\n1. **Identificar el nombre de la materia** a partir del contenido o nombre del archivo.\n2. **Diseñar un cronograma de estudio completo** en español, en formato texto claro y estructurado.\n3. **Actualizar el documento asignado** usando la herramienta \"completar cronograma\" con el contenido del cronograma.\n\n---\n\n### Criterios del cronograma\n\n- Usá un esquema semanal (por ejemplo, 16 semanas o lo que se deduzca del programa).\n- Incluí secciones con:\n  - título general (“Cronograma de estudio — <Materia>”),\n  - resumen general (duración, carga semanal, objetivos),\n  - tabla o lista de semanas con temas, objetivos, actividades,\n  - fechas estimadas de evaluaciones,\n  - bibliografía sugerida si figura en el programa.\n- Todo debe estar en **formato texto compatible con Google Docs** (sin markdown ni backticks).\n- No inventes contenido ajeno al programa; si asumís algo, acláralo en un bloque “Suposiciones”.\n\n---\n\n### Modo de acción\n1. Analizá el texto recibido y extraé el nombre de la materia.\n2. Elaborá el cronograma.\n3. Llamá a la herramienta `\"completar cronograma\"` con los parámetros:\n\n```json\n{\n  \"titulo\": \"<Materia> - Cronograma\",\n  \"contenido\": \"<texto completo del cronograma>\"\n}\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -48,
+        576
+      ],
+      "id": "065e5a70-36f3-4403-b5ef-47073f096286",
+      "name": "Escribir documento cronograma"
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "=",
+          "__regex": "https:\\/\\/(?:drive|docs)\\.google\\.com(?:\\/.*|)\\/d\\/([0-9a-zA-Z\\-_]+)(?:\\/.*|)"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        336,
+        576
+      ],
+      "id": "89daf103-7714-44cb-a748-a976c29f2c90",
+      "name": "Mover documento a carpeta \"Cronogramas\"",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "CdrsrQMCQtGQ99wL",
+          "name": "n8n creedenciales 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Sección para dado el programa de una materia, crear un cronograma para abordar el estudio de la misma\n",
+        "height": 432,
+        "width": 2192
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1440,
+        496
+      ],
+      "typeVersion": 1,
+      "id": "0d637859-b56e-4557-a36d-366d5535111c",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -864,
+        1104
+      ],
+      "id": "c8efab1f-85b6-4a5e-a708-4b1339e18411",
+      "name": "When chat message received",
+      "webhookId": "469b913c-eb3c-46ac-999d-3e68ecdd3b61"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -704,
+        1312
+      ],
+      "id": "59641f44-253b-4be7-943b-09ee45848b80",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "x6PQPIcj2ckYibkA",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -544,
+        1312
+      ],
+      "id": "fe1e276a-6cec-439a-91d7-c5b49db8548b",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "content": "## Esta sección sirve para que el usuario pueda hacerse un test para saber cuanto sabe de un tema con la función \"preguntas y respuestas\". también está la función de división de un trabajo, dado una consigna y la cantidad de participantes, se divide el mismo.\n",
+        "height": 480,
+        "width": 1184
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1040,
+        976
+      ],
+      "typeVersion": 1,
+      "id": "5fec2d5c-de00-40d0-b0ea-4e7b9472bd48",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "Sos un agente que puede hacer dos cosas:\n1) Practicar preguntas y respuestas (QA) sobre un tema.\n2) Dividir un trabajo grupal (planner) dada una consigna y participantes.\n\nSi el usuario dice “qa” o menciona practicar, arrancá con QA: hacé una pregunta sobre el tema y esperá su respuesta; evaluá, explicá y seguí con otra.\nSi dice “dividir”, pedí consigna y cantidad/nombres; proponé reparto de tareas y cronograma.\n\nSi el mensaje es solo “hola” u otra cosa vaga, preguntá una sola vez qué modo quiere (QA o dividir) y después no repitas esa pregunta en turnos siguientes: usá la memoria de la conversación.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -656,
+        1104
+      ],
+      "id": "379d1093-d344-4e7e-aa4f-1453dc6330c0",
+      "name": "Asistente facultad"
+    },
+    {
+      "parameters": {
+        "formTitle": "Fechas Exámenes",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Nombre materia",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Tipo Examen",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Fecha Examen",
+              "fieldType": "date"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -816,
+        -80
+      ],
+      "id": "de0b2d95-5d5b-43da-af54-31ad2ae1f4fc",
+      "name": "Registrar Examenes",
+      "webhookId": "cc06bc24-7293-4052-8914-bbc5f848c017"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Obtener filas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener filas": {
+      "main": [
+        [
+          {
+            "node": "Filtrar los proximos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar los proximos": {
+      "main": [
+        [
+          {
+            "node": "Notificar proximos examenes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agregar Examenes a Sheets": {
+      "main": [
+        [
+          {
+            "node": "Notificar que se agregó",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notificar que se agregó": {
+      "main": [
+        []
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Escribir documento cronograma",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "completar cronograma": {
+      "ai_tool": [
+        [
+          {
+            "node": "Escribir documento cronograma",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Se sube programa de materia": {
+      "main": [
+        [
+          {
+            "node": "Se descarga",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Se descarga": {
+      "main": [
+        [
+          {
+            "node": "Se obtiene información del mismo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Se obtiene información del mismo": {
+      "main": [
+        [
+          {
+            "node": "Se llama a LLM para que obtenga nombre correcto del archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Se llama a LLM para que obtenga nombre correcto del archivo": {
+      "main": [
+        [
+          {
+            "node": "Se crea el documento del cronograma de la materia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Se crea el documento del cronograma de la materia": {
+      "main": [
+        [
+          {
+            "node": "Escribir documento cronograma",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escribir documento cronograma": {
+      "main": [
+        [
+          {
+            "node": "Mover documento a carpeta \"Cronogramas\"",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mover documento a carpeta \"Cronogramas\"": {
+      "main": [
+        []
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Asistente facultad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Asistente facultad",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "Asistente facultad",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Examenes": {
+      "main": [
+        [
+          {
+            "node": "Agregar Examenes a Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "597d8943-c1a7-4f6b-b309-fb80f5d8f80f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3dbabd250b3c6c3f5a6802e300d094d5842bae3d1f5cba57245de6945c825f26"
+  },
+  "id": "0WJE6XSMfJh1ftwi",
+  "tags": []
+}
